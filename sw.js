@@ -96,16 +96,16 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// ==================== PUSH-УВЕДОМЛЕНИЯ ====================
+// ==================== PUSH-УВЕДОМЛЕНИЯ (ДЛЯ 17-Й РАБОТЫ С КНОПКОЙ) ====================
 self.addEventListener('push', (event) => {
   console.log('📨 Получено push-уведомление', event);
   
   let data = { 
     title: '🔔 Новое уведомление', 
-    body: 'У вас новое сообщение' 
+    body: '',
+    reminderId: null
   };
   
-  // Парсим данные из push-уведомления
   if (event.data) {
     try {
       data = event.data.json();
@@ -118,39 +118,76 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: '/icons/favicon-128x128.png',
     badge: '/icons/favicon-48x48.png',
-    vibrate: [200, 100, 200], // Вибрация на поддерживаемых устройствах
-    tag: 'notification-' + Date.now(), // Чтобы не дублировались
-    data: {
-      url: '/' // URL для перехода при клике
-    }
+    vibrate: [200, 100, 200],
+    data: { reminderId: data.reminderId }
   };
+  
+  // Добавляем кнопку "Отложить" ТОЛЬКО если это напоминание (есть reminderId)
+  if (data.reminderId) {
+    options.actions = [
+      { action: 'snooze', title: '⏰ Отложить на 5 минут' }
+    ];
+    console.log('🔘 Добавлена кнопка "Отложить" для напоминания:', data.reminderId);
+  }
   
   event.waitUntil(
     self.registration.showNotification(data.title, options)
   );
 });
 
-// ==================== ОБРАБОТЧИК КЛИКА ПО УВЕДОМЛЕНИЮ ====================
+// ==================== ОБРАБОТКА КЛИКА ПО УВЕДОМЛЕНИЮ (ДЛЯ 17-Й РАБОТЫ) ====================
 self.addEventListener('notificationclick', (event) => {
-  console.log('🔔 Пользователь кликнул по уведомлению', event);
+  const notification = event.notification;
+  const action = event.action;
+  const reminderId = notification.data?.reminderId;
   
-  event.notification.close();
+  console.log('🔔 Клик по уведомлению:', { action, reminderId });
   
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(windowClients => {
-        // Если уже есть открытое окно, переключаемся на него
-        for (let client of windowClients) {
-          if (client.url === '/' && 'focus' in client) {
-            return client.focus();
+  // Закрываем уведомление
+  notification.close();
+  
+  // Если нажата кнопка "Отложить"
+  if (action === 'snooze' && reminderId) {
+    console.log('⏰ Откладываем напоминание:', reminderId);
+    
+    event.waitUntil(
+      fetch(`/snooze?reminderId=${reminderId}`, { method: 'POST' })
+        .then(response => {
+          if (response.ok) {
+            console.log('✅ Напоминание успешно отложено на 5 минут');
+            
+            // Показываем небольшое уведомление об откладывании
+            return self.registration.showNotification('⏰ Напоминание отложено', {
+              body: 'Новое напоминание придёт через 5 минут',
+              icon: '/icons/favicon-128x128.png',
+              badge: '/icons/favicon-48x48.png'
+            });
+          } else {
+            console.error('❌ Ошибка откладывания');
           }
-        }
-        // Иначе открываем новое окно
-        if (clients.openWindow) {
-          return clients.openWindow('/');
-        }
-      })
-  );
+        })
+        .catch(err => console.error('❌ Ошибка при откладывании:', err))
+    );
+  } else {
+    // Обычный клик по уведомлению — открываем приложение
+    console.log('🔓 Открываем приложение');
+    
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .then(windowClients => {
+          // Если уже есть открытое окно, переключаемся на него
+          for (let client of windowClients) {
+            if (client.url === '/' && 'focus' in client) {
+              return client.focus();
+            }
+          }
+          // Иначе открываем новое окно
+          if (clients.openWindow) {
+            return clients.openWindow('/');
+          }
+        })
+    );
+  }
 });
 
 // ==================== ОБРАБОТЧИК СООБЩЕНИЙ ОТ КЛИЕНТА ====================

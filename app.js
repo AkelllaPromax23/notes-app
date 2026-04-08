@@ -34,33 +34,90 @@ aboutBtn.onclick = (e) => {
   loadContent('about'); 
 };
 
-// ==================== ЛОГИКА ЗАМЕТОК ====================
+// ==================== ЛОГИКА ЗАМЕТОК И НАПОМИНАНИЙ ====================
 function initNotes() {
   const form = document.getElementById('note-form');
   const input = document.getElementById('note-input');
+  const reminderForm = document.getElementById('reminder-form');
+  const reminderText = document.getElementById('reminder-text');
+  const reminderTime = document.getElementById('reminder-time');
   const list = document.getElementById('notes-list');
-  if (!form) return;
 
   function loadNotes() {
     const notes = JSON.parse(localStorage.getItem('notes') || '[]');
-    list.innerHTML = notes.map(n => `<li>📌 ${n}</li>`).join('');
+    list.innerHTML = notes.map(note => {
+      let reminderInfo = '';
+      if (note.reminder) {
+        const date = new Date(note.reminder);
+        reminderInfo = `<br><small>⏰ Напоминание: ${date.toLocaleString()}</small>`;
+      }
+      return `<li style="margin-bottom: 0.5rem; padding: 0.5rem; border-bottom: 1px solid #ddd;">
+        📌 ${note.text}
+        ${reminderInfo}
+      </li>`;
+    }).join('');
   }
 
-  form.onsubmit = (e) => {
-    e.preventDefault();
-    const text = input.value.trim();
-    if (text) {
-      const notes = JSON.parse(localStorage.getItem('notes') || '[]');
-      notes.push(text);
-      localStorage.setItem('notes', JSON.stringify(notes));
-      loadNotes();
-      input.value = '';
+  // Обычная заметка (без напоминания)
+  if (form) {
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (text) {
+        const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+        const newNote = { id: Date.now(), text, reminder: null };
+        notes.push(newNote);
+        localStorage.setItem('notes', JSON.stringify(notes));
+        loadNotes();
+        input.value = '';
+        
+        // Отправляем через WebSocket (как в 16-й работе)
+        socket.emit('newTask', { text });
+      }
+    };
+  }
+
+  // Заметка с напоминанием
+  if (reminderForm) {
+    reminderForm.onsubmit = (e) => {
+      e.preventDefault();
+      const text = reminderText.value.trim();
+      const timeValue = reminderTime.value;
       
-      // 🟢 ОТПРАВКА СОБЫТИЯ ЧЕРЕЗ WEBSOCKET
-      socket.emit('newTask', { text });
-    }
-  };
-  
+      if (text && timeValue) {
+        const reminderTimestamp = new Date(timeValue).getTime();
+        const now = Date.now();
+        
+        if (reminderTimestamp <= now) {
+          alert('⚠️ Дата и время должны быть в будущем!');
+          return;
+        }
+        
+        const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+        const newNote = { 
+          id: Date.now(), 
+          text: text, 
+          reminder: reminderTimestamp 
+        };
+        notes.push(newNote);
+        localStorage.setItem('notes', JSON.stringify(notes));
+        loadNotes();
+        
+        // Отправляем на сервер для планирования уведомления
+        socket.emit('newReminder', {
+          id: newNote.id,
+          text: text,
+          reminderTime: reminderTimestamp
+        });
+        
+        reminderText.value = '';
+        reminderTime.value = '';
+        
+        alert(`✅ Напоминание установлено на ${new Date(reminderTimestamp).toLocaleString()}`);
+      }
+    };
+  }
+
   loadNotes();
 }
 
