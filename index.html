@@ -3,44 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Web App Manifest -->
   <link rel="manifest" href="/manifest.json">
-
-  <!-- Для Android -->
-  <meta name="mobile-web-app-capable" content="yes">
-
-  <!-- Цвет темы для браузера -->
   <meta name="theme-color" content="#4285f4">
-
-  <!-- Для iOS (иконка на домашний экран) -->
   <link rel="apple-touch-icon" href="/icons/favicon-128x128.png">
-
-  <!-- Для iOS (статус бар) -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-
-  <!-- Обычная иконка вкладки браузера -->
-  <link rel="icon" href="/icons/favicon-16x16.png" sizes="16x16" type="image/png">
-  <link rel="icon" href="/icons/favicon-32x32.png" sizes="32x32" type="image/png">
-  <link rel="icon" href="/icons/favicon-48x48.png" sizes="48x48" type="image/png">
-
   <title>Офлайн-заметки</title>
   <link rel="stylesheet" href="https://unpkg.com/chota@latest">
+  <style>
+    .active { background-color: #4285f4; color: white !important; }
+    nav a { text-decoration: none; padding: 0.5rem 1rem; border-radius: 4px; color: #4285f4; }
+  </style>
 </head>
 <body>
-  <div class="container" style="margin-top: 2rem;">
-    <h1>📝 Офлайн-заметки</h1>
-    <p>Работает даже без интернета</p>
-
-    <form id="note-form" class="row">
-      <input class="col-9" type="text" id="note-input" placeholder="Введите заметку..." required>
-      <button class="col-3" type="submit">➕ Добавить</button>
-    </form>
-
-    <ul id="notes-list" style="margin-top: 1rem;"></ul>
+  <div class="container">
+    <header>
+      <h1>📝 Офлайн-заметки</h1>
+      <nav class="row">
+        <a href="#" id="home-btn" class="col-2 active">🏠 Главная</a>
+        <a href="#" id="about-btn" class="col-2">ℹ️ О приложении</a>
+      </nav>
+    </header>
+    <main id="app-content">Загрузка...</main>
   </div>
-
   <script src="app.js"></script>
 </body>
 </html>
